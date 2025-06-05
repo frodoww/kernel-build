@@ -5,7 +5,7 @@ on:
 jobs:
   build:
     runs-on: buildjet-16vcpu-ubuntu-2204
-      steps:
+  steps:
     - name: Checkout Code
       uses: actions/checkout@v4
 
