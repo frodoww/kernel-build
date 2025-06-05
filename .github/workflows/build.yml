@@ -3,7 +3,7 @@ name: build
 on:
   workflow_dispatch:
 jobs:
-  build:
+  build: kernel
     runs-on: buildjet-16vcpu-ubuntu-2204
     - name: Checkout Code
       uses: actions/checkout@v4
