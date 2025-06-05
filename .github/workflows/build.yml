@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 jobs:
   build: kernel
-    runs-on: buildjet-16vcpu-ubuntu-2204
+     runs-on: buildjet-16vcpu-ubuntu-2204
     - name: Checkout Code
       uses: actions/checkout@v4
 
