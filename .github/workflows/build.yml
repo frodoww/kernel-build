@@ -25,7 +25,7 @@ jobs:
 
       - name: Clone Toolchain (Example:Proton Clang)
         run: |    
-         git clone https://github.com/proton-clang/proton-clang.git
+         --dept=1 git clone https://github.com/proton-clang/proton-clang.git
 
       - name: Build Kernel
         env:
@@ -34,7 +34,7 @@ jobs:
           KBUILD_BUILD_USER: Vayooo
           KBUILD_BUILD_HOST: Prjkt
         run: |
-          export PATH="$GITHUB_WORKSPACE/clang/bin:$PATH"
+          export PATH="$(pwd)/proton-clang/bin:$PATH"
           make O=out ARCH=arm64 rosemary_defconfig
           make -j$(nproc) O=out ARCH=arm64 \
               CC=clang \
@@ -49,7 +49,7 @@ jobs:
 
       - name: Clone AnyKernel3
         run: |
-          git clone https://github.com/zainarbani/AnyKernel3.git
+          --dept=1 git clone https://github.com/zainarbani/AnyKernel3.git
           cp out/arch/arm64/boot/Image.gz-dtb AnyKernel3/
           cd AnyKernel3
           zip -r9 kernel-flashable.zip *
@@ -59,4 +59,5 @@ jobs:
         with:
           name: flashable-zip
           path: AnyKernel3/kernel-flashable.zip
+
           
