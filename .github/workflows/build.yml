@@ -12,51 +12,51 @@ jobs:
     runs-on: buildjet-4vcpu-ubuntu-2204
 
     steps:
-    - name: Checkout Kernel Source
-      uses: actions/checkout@v3
-      with:
-        submodules: recursive
+      - name: Checkout Kernel Source
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
 
-    - name: Setup Environment
-      run: |
-       sudo apt-get update
-       sudo apt-get install -y bc bison flex libssl-dev make libc6-dev libncurses5-dev \
-       gcc build-essential clang python3 git wget unzip cpio
+      - name: Setup Environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bc bison flex libssl-dev make libc6-dev libncurses5-dev \
+            gcc build-essential clang python3 git wget unzip cpio
 
-   - name: Clone Toolchain (Example: Proton Clang)
-    run: |    
-     git clone https://github.com/proton-clang/proton-clang.git
-    
-    - name: Build Kernel
-      env:
-        ARCH: arm64
-        SUBARCH: arm64
-        KBUILD_BUILD_USER: Vayooo
-        KBUILD_BUILD_HOST: Prjkt
-      run: |
-        export PATH="$GITHUB_WORKSPACE/clang/bin:$PATH"
-        make O=out ARCH=arm64 rosemary_defconfig
-        make -j$(nproc) O=out ARCH=arm64 \
-            CC=clang \
-            CROSS_COMPILE=aarch64-linux-gnu- \
-            CROSS_COMPILE_ARM32=arm-linux-gnueabi-
+      - name: Clone Toolchain (Example: Proton Clang)
+        run: |
+          git clone https://github.com/proton-clang/proton-clang.git
 
-    - name: Upload Kernel Image
-      uses: actions/upload-artifact@v3
-      with:
-        name: kernel-image
-        path: out/arch/arm64/boot/Image.gz-dtb
-    
-    - name: Clone AnyKernel3
-      run: |
-        git clone https://github.com/zainarbani/AnyKernel3.git
-        cp out/arch/arm64/boot/Image.gz-dtb AnyKernel3/
-        cd AnyKernel3
-        zip -r9 kernel-flashable.zip *
+      - name: Build Kernel
+        env:
+          ARCH: arm64
+          SUBARCH: arm64
+          KBUILD_BUILD_USER: Vayooo
+          KBUILD_BUILD_HOST: Prjkt
+        run: |
+          export PATH="$GITHUB_WORKSPACE/clang/bin:$PATH"
+          make O=out ARCH=arm64 rosemary_defconfig
+          make -j$(nproc) O=out ARCH=arm64 \
+              CC=clang \
+              CROSS_COMPILE=aarch64-linux-gnu- \
+              CROSS_COMPILE_ARM32=arm-linux-gnueabi-
 
-    - name: Upload Flashable Zip
-      uses: actions/upload-artifact@v3
-      with:
-        name: flashable-zip
-        path: AnyKernel3/kernel-flashable.zip
-        
+      - name: Upload Kernel Image
+        uses: actions/upload-artifact@v3
+        with:
+          name: kernel-image
+          path: out/arch/arm64/boot/Image.gz-dtb
+
+      - name: Clone AnyKernel3
+        run: |
+          git clone https://github.com/zainarbani/AnyKernel3.git
+          cp out/arch/arm64/boot/Image.gz-dtb AnyKernel3/
+          cd AnyKernel3
+          zip -r9 kernel-flashable.zip *
+
+      - name: Upload Flashable Zip
+        uses: actions/upload-artifact@v3
+        with:
+          name: flashable-zip
+          path: AnyKernel3/kernel-flashable.zip
+          
