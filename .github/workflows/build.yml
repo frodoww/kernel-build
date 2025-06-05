@@ -19,14 +19,14 @@ jobs:
 
     - name: Setup Environment
       run: |
-        sudo apt-get update
-        sudo apt-get install -y bc bison flex libssl-dev make libc6-dev libncurses5-dev \
-            gcc build-essential clang python3 git wget unzip cpio
+       sudo apt-get update
+       sudo apt-get install -y bc bison flex libssl-dev make libc6-dev libncurses5-dev \
+       gcc build-essential clang python3 git wget unzip cpio
 
-    - name: Clone Toolchain (Example: Proton Clang)
-      run: |
-        git clone --depth=1 https://github.com/kdrag0n/proton-clang clang
-
+   - name: Clone Toolchain (Example: Proton Clang)
+    run: |    
+     git clone https://github.com/proton-clang/proton-clang.git
+    
     - name: Build Kernel
       env:
         ARCH: arm64
