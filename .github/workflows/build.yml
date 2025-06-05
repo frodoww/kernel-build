@@ -1,122 +1,62 @@
-name: Kernel Build
+name: Android Kernel Build
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
-    inputs:
-      KERNEL_REPO:
-        description: 'KERNEL_REPO'
-        required: true
-        default: 'https://github.com/zainarbani/kernel-mtk'
-      KERNEL_BRANCH:
-        description: 'KERNEL_BRANCH'
-        required: true
-        default: 's'
-      KERNEL_DEFCONFIG:
-        description: 'KERNEL_DEFCONFIG'
-        required: true
-        default: 'rosemary_defconfig'
-      KERNEL_HOTFIX:
-        description: 'KERNEL_HOTFIX'
-        required: false
-        default: 'N/A'
 
 jobs:
   build:
-    if: github.event.repository.owner.id == github.event.sender.id
-    runs-on: buildjet-8vcpu-ubuntu-2204
-    permissions:
-      contents: write
+    name: Build Kernel
+    runs-on: buildjet-4vcpu-ubuntu-2204
+
     steps:
-
-    - name: Prepare Env
-      run: |
-        sudo apt update  &> /dev/null
-        sudo apt -y install gawk aria2 git ccache automake flex lzop bison gperf build-essential zip curl zlib1g-dev gcc-multilib g++-multilib libxml2-utils bzip2 libbz2-dev libbz2-1.0 libghc-bzlib-dev squashfs-tools pngcrush schedtool dpkg-dev liblz4-tool make optipng maven libssl-dev pwgen libswitch-perl policycoreutils minicom libxml-sax-base-perl libxml-simple-perl bc libc6-dev-i386 lib32ncurses5-dev libx11-dev lib32z-dev libgl1-mesa-dev xsltproc unzip device-tree-compiler python2 python3 &> /dev/null
-        git config --global user.name "bot"
-        git config --global user.email "bot@email.com"
-        mkdir -p $GITHUB_WORKSPACE/project
-          
-    - name: Prepare TC
-      run: |
-        mkdir -p $GITHUB_WORKSPACE/project/clang
-        CLANG_URL=$(curl -Ls https://raw.githubusercontent.com/ZyCromerZ/Clang/main/Clang-main-link.txt)
-        aria2c $CLANG_URL &> /dev/null
-        tar -C $GITHUB_WORKSPACE/project/clang/ -zxf ${CLANG_URL##*/}
-
-    - name: Prepare Kernel
-      run: |
-        cd $GITHUB_WORKSPACE/project
-        git clone -b ${{ github.event.inputs.KERNEL_BRANCH }} ${{ github.event.inputs.KERNEL_REPO }} linux --recurse-submodules --depth=1 &> /dev/null
-        git clone -b master https://github.com/zainarbani/AnyKernel3 AnyKernel3 --depth=1 &> /dev/null
-
-    - name: Building Kernel
-      run: |
-        cd $GITHUB_WORKSPACE/project/linux
-        PATH=$GITHUB_WORKSPACE/project/clang/bin:$PATH
-        export TZ="Asia/Jakarta"
-        export DATE=$(date "+%Y%m%d-%H%M")
-        echo "BUILD_DATE=$(date "+%Y%m%d%H%M")" >> $GITHUB_ENV
-        echo "KERNEL_VER=$(make kernelversion)" >> $GITHUB_ENV
-        echo "CLANG_VER=$(clang --version | head -n 1 | perl -pe 's/\(http.*?\)//gs' | sed -e 's/  */ /g')" >> $GITHUB_ENV
-        export ARCH=arm64
-        export KBUILD_BUILD_HOST=builder
-        export KBUILD_BUILD_USER=zainarbani
-        export KBUILD_COMPILER_STRING="$(clang --version | head -n 1 | perl -pe 's/\(http.*?\)//gs' | sed -e 's/  */ /g' -e 's/[[:space:]]*$//')"
-        echo "-OverHeat-LTO" > localversion
-        make O=out ARCH=$ARCH ${{ github.event.inputs.KERNEL_DEFCONFIG }}
-        make -j$(nproc --all) O=out CC=clang ARCH=$ARCH CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- LLVM=1 LLVM_IAS=1 LD=ld.lld NM=llvm-nm AR=llvm-ar OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump
-        cp out/arch/arm64/boot/Image.gz-dtb $GITHUB_WORKSPACE/project/Image.gz-dtb
-        make clean
-        wget https://gist.githubusercontent.com/zainarbani/2b482e9e9c415a644953397b6ba5571f/raw/b66cf8d0683b5397fc1f7cc6b33ff12cc9bf9292/ksu.patch
-        git apply ksu.patch || exit
-        curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s v0.9.5
-        make O=out ARCH=$ARCH ${{ github.event.inputs.KERNEL_DEFCONFIG }}
-        make -j$(nproc --all) O=out CC=clang ARCH=$ARCH CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- LLVM=1 LLVM_IAS=1 LD=ld.lld NM=llvm-nm AR=llvm-ar OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump
-        cp out/arch/arm64/boot/Image.gz-dtb $GITHUB_WORKSPACE/project/Image.gz-dtb-ksu
-
-    - name: Prepare AK3
-      run: |
-        cd $GITHUB_WORKSPACE/project/AnyKernel3
-        cp $GITHUB_WORKSPACE/project/Image.gz-dtb Image.gz-dtb
-        zip -r9 $GITHUB_WORKSPACE/project/OverHeat-dev.zip -- *
-        cp $GITHUB_WORKSPACE/project/Image.gz-dtb-ksu Image.gz-dtb
-        zip -r9 $GITHUB_WORKSPACE/project/OverHeat-dev-ksu.zip -- *
-        
-    - name: Upload Release
-      uses: softprops/action-gh-release@v1
+    - name: Checkout Kernel Source
+      uses: actions/checkout@v3
       with:
-        files: |
-          ${{ github.workspace }}/project/OverHeat-dev.zip
-          ${{ github.workspace }}/project/OverHeat-dev-ksu.zip
-        name: OverHeat-${{ env.BUILD_DATE }}
-        tag_name: ${{ env.BUILD_DATE }}
-        body: |
-          Repo: ${{ github.event.inputs.KERNEL_REPO }}
-          Branch: ${{ github.event.inputs.KERNEL_BRANCH }}
-          Config: ${{ github.event.inputs.KERNEL_DEFCONFIG }}
+        submodules: recursive
+
+    - name: Setup Environment
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y bc bison flex libssl-dev make libc6-dev libncurses5-dev \
+            gcc build-essential clang python3 git wget unzip cpio
+
+    - name: Clone Toolchain (Example: Proton Clang)
+      run: |
+        git clone --depth=1 https://github.com/kdrag0n/proton-clang clang
+
+    - name: Build Kernel
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        ARCH: arm64
+        SUBARCH: arm64
+        KBUILD_BUILD_USER: Vayooo
+        KBUILD_BUILD_HOST: Prjkt
+      run: |
+        export PATH="$GITHUB_WORKSPACE/clang/bin:$PATH"
+        make O=out ARCH=arm64 rosemary_defconfig
+        make -j$(nproc) O=out ARCH=arm64 \
+            CC=clang \
+            CROSS_COMPILE=aarch64-linux-gnu- \
+            CROSS_COMPILE_ARM32=arm-linux-gnueabi-
 
-    - name: Update TG
-      uses: appleboy/telegram-action@master
+    - name: Upload Kernel Image
+      uses: actions/upload-artifact@v3
       with:
-        to: ${{ secrets.CHAT_ID }}
-        token: ${{ secrets.BOT_TOKEN }}
-        format: html
-        disable_web_page_preview: true
-        message: |
-          <b>OverHeat-Kernel Update</b>
+        name: kernel-image
+        path: out/arch/arm64/boot/Image.gz-dtb
+    
+    - name: Clone AnyKernel3
+      run: |
+        git clone https://github.com/zainarbani/AnyKernel3.git
+        cp out/arch/arm64/boot/Image.gz-dtb AnyKernel3/
+        cd AnyKernel3
+        zip -r9 kernel-flashable.zip *
 
-          <b>Build Date: </b>${{ env.BUILD_DATE }}
-          
-          <a href="https://github.com/${{ github.repository }}/releases/tag/${{ env.BUILD_DATE }}">Download</a>
-          
-          <a href="${{ github.event.inputs.KERNEL_REPO }}/commits/${{ github.event.inputs.KERNEL_BRANCH }}">Changelogs</a>
-
-          <b>Hotfix:</b>
-          ${{ github.event.inputs.KERNEL_HOTFIX }}
-
-          <b>Config: </b>${{ github.event.inputs.KERNEL_DEFCONFIG }}
-          <b>Kernel Ver: </b>${{ env.KERNEL_VER }}
-          <b>Clang Ver: </b>${{ env.CLANG_VER }}
-          <b>Maintainer: </b>@AnotherZain
+    - name: Upload Flashable Zip
+      uses: actions/upload-artifact@v3
+      with:
+        name: flashable-zip
+        path: AnyKernel3/kernel-flashable.zip
+        
