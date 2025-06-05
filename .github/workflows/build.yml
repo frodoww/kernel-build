@@ -8,8 +8,9 @@ on:
 
 jobs:
   build:
-    name: Build Kernel
     runs-on: buildjet-4vcpu-ubuntu-2204
+    steps:
+      - run: echo "Hello World"
 
     steps:
       - name: Checkout Kernel Source
