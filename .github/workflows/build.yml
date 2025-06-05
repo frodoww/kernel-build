@@ -1,19 +1,13 @@
 name: Android Kernel Build
-
+name: build
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
-
 jobs:
   build:
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: buildjet-16vcpu-ubuntu-2204
     steps:
-      - name: Checkout Kernel Source
-        uses: actions/checkout@v3
-        with:
-          submodules: recursive
+    - name: Checkout Code
+      uses: actions/checkout@v4
 
       - name: Setup Environment
         run: |    
